@@ -26,6 +26,7 @@ jobs:
 
       - name: Create post file
         run: |
+          mkdir -p _posts
           echo "${{ steps.create_post_content.outputs.content }}" > _posts/${{ steps.date.outputs.formatted_date }}-hackernews-top-posts.md
 
       - name: Commit and push if it changed
