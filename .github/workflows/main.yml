@@ -2,7 +2,7 @@ name: Create Daily Hacker News Post
 on:
   schedule:
     - cron: '0 0 * * *'
-  workflow_dispatch: # Added a comment to force re-evaluation
+  workflow_dispatch:
 
 jobs:
   create_post:
@@ -17,11 +17,23 @@ jobs:
       - name: Create _posts directory
         run: mkdir -p _posts
 
-      - name: Create test post file
-        run: echo "---\nlayout: post\ntitle: \"Test Post\"\ndate: ${{ steps.date.outputs.formatted_date }}\n---\n\nThis is a test post." > _posts/${{ steps.date.outputs.formatted_date }}-test-post.md
+      - name: Scrape Hacker News and create post content
+        id: create_post_content
+        run: |
+          HACKERNEWS_CONTENT=$(curl -s https://news.ycombinator.com)
+          POST_BODY=$(echo "$HACKERNEWS_CONTENT" | grep -o '<a href="[^"]*" class="titleline">[^<]*</a>' | head -n 10 | sed -e 's/<a href=\"\(.*\)\" class=\"titleline\">\(.*\)<\/a>/1. [\2](\1)/')
+          FRONTMATTER="---\nlayout: post\ntitle: \"Top 10 Hacker News Posts for ${{ steps.date.outputs.formatted_date }}\"\ndate: ${{ steps.date.outputs.formatted_date }}\n---"
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$FRONTMATTER\n\n$POST_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create post file
+        run: |
+          mkdir -p _posts
+          echo "${{ steps.create_post_content.outputs.content }}" > _posts/${{ steps.date.outputs.formatted_date }}-hackernews-top-posts.md
 
       - name: Commit and push if it changed
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: 'docs: Add test post'
+          commit_message: 'docs: new Hacker News post for ${{ steps.date.outputs.formatted_date }}'
           file_pattern: _posts/*.md
