@@ -1,27 +1,35 @@
-name: CI
+name: Create Daily Hacker News Post
 on:
   schedule:
-    - cron:  '0 0 * * *'
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
 jobs:
-  build:
+  create_post:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date +'%Y-%m-%d-%H-%M-%S')"
-      - name: Scrape Hacker News
-        id: scrape
-        uses: actions/github-script@v5
-        with:
-          script: |
-            const fetch = require('node-fetch');
-            const response = await fetch('https://news.ycombinator.com');
-            const body = await response.text();
-            core.setOutput('content', body);
-      - name: Create new file
-        run: echo "${{ steps.scrape.outputs.content }}" > ${{ steps.date.outputs.date }}.md
-      - name: Commit new file
+        run: echo "formatted_date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Scrape Hacker News and create post content
+        id: create_post_content
+        run: |
+          HACKERNEWS_CONTENT=$(curl -s https://news.ycombinator.com)
+          POST_BODY=$(echo "$HACKERNEWS_CONTENT" | grep -o '<a href="[^"]*" class="titleline">[^<]*</a>' | head -n 10 | sed -e 's/<a href="\(.*\)" class="titleline">\(.*\)<\/a>/1. [\2](\1)/')
+          FRONTMATTER="---\nlayout: post\ntitle: \"Top 10 Hacker News Posts for ${{ steps.date.outputs.formatted_date }}\"\ndate: ${{ steps.date.outputs.formatted_date }}\n---"
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo -e "$FRONTMATTER\n\n$POST_BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create post file
+        run: |
+          echo "${{ steps.create_post_content.outputs.content }}" > _posts/${{ steps.date.outputs.formatted_date }}-hackernews-top-posts.md
+
+      - name: Commit and push if it changed
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
-          commit_message: "Add daily Hacker News scrape"
+          commit_message: 'docs: new Hacker News post for ${{ steps.date.outputs.formatted_date }}'
+          file_pattern: _posts/*.md
