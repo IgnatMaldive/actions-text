@@ -1,4 +1,3 @@
-
 name: CI
 on:
   push:
@@ -8,5 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Run a one-line script
-        run: cat file.txt
+      - name: Commit new file
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "Add hackernews.md"
