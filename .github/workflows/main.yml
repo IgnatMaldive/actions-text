@@ -14,6 +14,9 @@ jobs:
         id: date
         run: echo "formatted_date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
+      - name: Create _posts directory
+        run: mkdir -p _posts
+
       - name: Scrape Hacker News and create post content
         id: create_post_content
         run: |
