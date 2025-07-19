@@ -10,12 +10,18 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Debug - List files after checkout
+        run: ls -la
+
       - name: Get current date
         id: date
         run: echo "formatted_date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - name: Create _posts directory
         run: mkdir -p _posts
+
+      - name: Debug - List files after creating _posts
+        run: ls -la
 
       - name: Scrape Hacker News and create post content
         id: create_post_content
@@ -26,6 +32,9 @@ jobs:
           echo "content<<EOF" >> $GITHUB_OUTPUT
           echo -e "$FRONTMATTER\n\n$POST_BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Debug - List files before creating post file
+        run: ls -la _posts
 
       - name: Create post file
         run: |
